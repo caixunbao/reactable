@@ -176,7 +176,7 @@ reactable <- function(data, columns = NULL, columnGroups = NULL,
                       fullWidth = TRUE, width = "auto", height = "auto",
                       theme = getOption("reactable.theme"),
                       language = getOption("reactable.language"),
-                      elementId = NULL) {
+                      elementId = NULL, server = FALSE) {
 
   crosstalkKey <- NULL
   crosstalkGroup <- NULL
@@ -555,6 +555,28 @@ reactable <- function(data, columns = NULL, columnGroups = NULL,
     })
   }
 
+  preRenderHook <- NULL
+  if (server) {
+    origData <- data
+
+    # TODO default sorted columns, default groupBy, etc.
+    initialPage <- filterReactableData(origData, cols, list(pageIndex = 0, pageSize = defaultPageSize))
+    data <- initialPage$data
+
+    # TODO renderReactable(server = )?
+    preRenderHook <- function(instance) {
+      session <- shiny::getDefaultReactiveDomain()
+      outputId <- session$getCurrentOutputInfo()[["name"]]
+      dataURL <- session$registerDataObj(
+        outputId,
+        list(data = origData, columns = cols),
+        reactableFilterFunc
+      )
+      instance$x$tag$attribs$dataURL <- dataURL
+      instance
+    }
+  }
+
   data <- jsonlite::toJSON(data, dataframe = "columns", rownames = FALSE, digits = NA,
                            POSIXt = "ISO8601", Date = "ISO8601", UTC = TRUE, force = TRUE)
 
@@ -628,7 +650,8 @@ reactable <- function(data, columns = NULL, columnGroups = NULL,
     sizingPolicy = htmlwidgets::sizingPolicy(knitr.figure = FALSE),
     package = "reactable",
     dependencies = dependencies,
-    elementId = elementId
+    elementId = elementId,
+    preRenderHook = preRenderHook
   )
 }
 
