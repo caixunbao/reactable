@@ -199,14 +199,14 @@ colDef(
 cellInfoProps <- dplyr::tribble(
   ~Property, ~Example, ~Description,
   "value", '"setosa"', "cell value",
-  "row", '{ Petal.Length: 1.7, Species: "setosa" }', "row data object",
+  "row", '{ Petal.Length: 1.7, Species: "setosa" }', "row data values",
   "column", '{ id: "Petal.Length" }', "column info object",
   "index", "20", "row index (zero-based)",
   "viewIndex", "0", "row index within the page (zero-based)",
   "aggregated", "true", "whether the row is aggregated",
   "expanded", "true", "whether the row is expanded (new in v0.2.3.9000)",
   "filterValue", '"petal"', "column filter value (new in v0.2.3.9000)",
-  "subRows", '[{ Petal.Length: 1.7, Species: "setosa" }, ...]', "array of sub row data objects (aggregated cells only)",
+  "subRows", '[{ Petal.Length: 1.7, Species: "setosa" }, ...]', "array of sub row data values (aggregated cells only)",
   "level", "0", "row nesting depth (zero-based)",
   "selected", "true", "whether the row is selected (new in v0.2.3.9000)"
 )
@@ -226,9 +226,9 @@ stateProps <- dplyr::tribble(
   "filters", '[{ id: "Species", value: "petal" }]', "array of column filter values (new in v0.2.3.9000)",
   "searchValue", '"petal"', "table search value (new in v0.2.3.9000)",
   "selected", '[0, 1, 4]', "array of selected row indices (zero-based, new in v0.2.3.9000)",
-  "pageRows", '[{ Petal.Length: 1.7, Species: "setosa" }, ...]', "array of row data objects in the page",
-  "sortedData", '[{ Petal.Length: 1.7, Species: "setosa" }, ...]', "sorted array of row data objects in the table",
-  "data", '[{ Petal.Length: 1.7, Species: "setosa" }, ...]', "original array of row data objects in the table"
+  "pageRows", '[{ Petal.Length: 1.7, Species: "setosa" }, ...]', "array of row data values in the page",
+  "sortedData", '[{ Petal.Length: 1.7, Species: "setosa" }, ...]', "sorted array of row data values in the table",
+  "data", '[{ Petal.Length: 1.7, Species: "setosa" }, ...]', "original array of row data values in the table"
 )
 
 propsTable(stateProps)
@@ -281,7 +281,7 @@ colDef(
 colInfoProps <- dplyr::tribble(
   ~Property, ~Example, ~Description,
   "column", '{ id: "Petal.Length", name: "Petal Length", filterValue: "petal" }', "column info object",
-  "data", '[{ Petal.Length: 1.7, Petal.Width: 0.2, _subRows: [] }, ...]', "sorted array of row data objects in the table"
+  "data", '[{ Petal.Length: 1.7, Petal.Width: 0.2, _subRows: [] }, ...]', "sorted array of row data values in the table"
 )
 
 propsTable(colInfoProps)
@@ -394,7 +394,8 @@ reactable(
 ```{r, echo=FALSE, asis=TRUE}
 rowInfoProps <- dplyr::tribble(
   ~Property, ~Example, ~Description,
-  "row", '{ Petal.Length: 1.7, Species: "setosa" }', "row data object",
+  "values", '{ Petal.Length: 1.7, Species: "setosa" }', "row data values (new in v0.2.3.9000)",
+  "row", '{ Petal.Length: 1.7, Species: "setosa" }', tagList("same as ", tags$code("values"), " (deprecated in v0.2.3.9000)"),
   "index", "20", "row index (zero-based)",
   "viewIndex", "0", "row index within the page (zero-based)",
   "expanded", "true", "whether the row is expanded (new in v0.2.3.9000)",
@@ -411,6 +412,80 @@ propsTable(rowInfoProps)
 propsTable(stateProps)
 ```
 
+## Filter Inputs
+
+> New in v0.2.3.9000 (unreleased)
+
+### R render function {#filter-r-render-function}
+
+To render a custom filter input, provide an R function with up to 2 optional arguments:
+
+```{r, eval=FALSE}
+colDef(
+  filterInput = function(values, name) {
+    # input:
+    #   - values, the column values
+    #   - name, the column name
+    #
+    # output:
+    #   - content to render (e.g. an HTML tag or HTML string)
+    htmltools::tags$input(
+      type = "text",
+      onchange = sprintf("Reactable.setFilter('tbl', '%s', this.value)", name),
+      "aria-label" = sprintf("Filter %s", name),
+      style = "width: 100%;"
+    )
+  }
+)
+```
+
+### JavaScript render function {#filter-js-render-function}
+
+Or a JavaScript function with up to 2 optional arguments:
+
+```{r, eval=FALSE}
+colDef(
+  filterInput = JS("
+    function(column, state) {
+      // input:
+      //  - column, an object containing column properties
+      //  - state, an object containing the table state
+      //
+      // output:
+      //  - content to render (e.g. an HTML string or React element)
+      return React.createElement('input', {
+        type: 'text',
+        value: column.filterValue,
+        onChange: function(e) {
+          return column.setFilter(e.target.value || undefined)
+        }
+      })
+    }
+  ")
+)
+```
+
+#### `column` properties
+
+```{r, echo=FALSE, asis=TRUE}
+columnProps <- dplyr::tribble(
+  ~Property, ~Example, ~Description,
+  "id", '"Petal.Length"', "column ID",
+  "name", '"Petal Length"', "column display name",
+  "filterValue", '"petal"', "column filter value",
+  "setFilter", 'function setFilter(value: any)', tagList("function to set the column filter value",  "(set to ", tags$code("undefined"), " to clear the filter)")
+)
+```
+
+```{r, echo=FALSE, asis=TRUE}
+propsTable(columnProps)
+```
+
+#### `state` properties
+
+```{r, echo=FALSE, asis=TRUE}
+propsTable(stateProps)
+```
 
 ```{css echo=FALSE}
 /* rmarkdown html documents */
